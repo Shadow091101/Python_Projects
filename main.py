@@ -1,106 +1,38 @@
-password="manavnaik123"
-def reversestr(str):
-    if len(str)==1 or len(str)==2:
-        return str[::-1]
-    
-def randomletter():
-    import random
-    rand=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k','l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w','x', 'y', 'z']
-    random_int=random.randint(0,25)
-    # print(random_int)
-    randlet=rand[random_int]
-    return randlet
+questions=["What is our national animal?\n Option 1 : Lion\tOption 2:Tiger\tOption 3:Cheetah\tOption 4:Leopard\n","Which country is called as land of winds?\nOption 1 : India\tOption 2:Brazil\tOption 3:Denmark\tOption 4 : Switzerland","What is minimum age required to stand for the lok sabha election of our country?\nOption 1:20\tOption 2:30\tOption 3:35\tOption 4:25","Who gave the slogan 'Tum Mujhe Khoon do Mei Tumhe ajadi Dunga'?\nOption 1:M.K.Gandhi\tOption 2:Netaji Subash Chandra Bose\tOption 3:Bankim Chandra Chatterjee\tOption 4:Vinayak Damodar Savarkar","Which country currently has the most assets in the world?\nOption 1:Apple\tOption 2:Microsoft\tOption 3:Facebook\tOption 4:Nvidia"]
 
-def changestr(str):
-    lst=list(str)
-    # print(lst)
-    pop1=lst.pop(0)
-    # print(pop1)
-    lst.append(pop1)
-    # print(lst)
-    lsttostr=''.join(lst)
-    # print(lsttostr)
-    for i in range(3):
-        rnd=randomletter()
-        # print(rnd)
-        lst.insert(0,rnd)
-    for i in range(3):
-        rnd=randomletter()
-        # print(rnd)
-        lst.append(rnd)
-    # print(lst)
-    lsttostr=''.join(lst)
-    # print(lsttostr)
-    return lsttostr
+Correctanswers=["Tiger","Denmark","25","Netaji Subash Chandra Bose","Microsoft"]
 
-def changestr1(encoded_str):
-    # Remove the last three characters
-    decoded_str = encoded_str[:-3]
-    # Remove the first three characters
-    decoded_str = decoded_str[3:]
-    # Rotate the string by moving its last character to the beginning
-    decoded_str = decoded_str[-1] + decoded_str[:-1]
-    return decoded_str
-
-def code():
-    a = input("Enter the statement: ")
-
-    b = a.split(" ")
-    # print(b)
-    endlst=[]
-    for i in range(len(b)):
-        # print(b[i])
-        if(len(b[i]))<=2:
-            revstr= reversestr(b[i])
-            endlst.append(revstr)
-            # print(revstr)
-        else:
-            chgestr=changestr(b[i])
-            endlst.append(chgestr)
-            
-        
-    # print("endlst:",endlst)
-    endstr=' '.join(endlst)
-    print("The coded message :",endstr)
+money=[1000,10000,50000,5000000,10000000]
+WinningAmount=0
 
 
-
-def decode():
-    a1 = input("Enter the coded message: ")
-    b1=a1.split(" ")
-    endlst1=[]
-    for i in range(len(b1)):
-        if(len(b1[i])<=2):
-            revstr=reversestr(b1[i])
-            endlst1.append(revstr)
-        else:
-            chgestr1=changestr1(b1[i])
-            endlst1.append(chgestr1)
-    endstr1=" ".join(endlst1)
-    validate=input("Enter the Password to decode the coded message : ")
-    if validate==password:
-        print("The decoded message : ",endstr1)
+def start():
+    print("Welcome Ladies and Gentlemen for Todays Episode of 'Kaun Banega Crorepati'.\nSo our Todays Contestent is : \n")
+    a=input("Enter Your Name : ")
+    print("So our Today's Contestent is Mr.",a)
+    b=input(("So are you ready For Today's Questions to come? 'Yes' or 'No'"))
+    if b=="Yes":
+       return questionsFunction()
     else:
-        print("As the password was incorrect you were not allowed to decode this code due to security reason.")
-        quit()
-        
-        
+        print("You are free to leave the game.")
 
-def main():   
-    while True:
-        print("Welcome to Coders and Decoders:")
-        choice=int(input("Select what you want to do:\n 1)Code \n 2)Decode\n 3) Quit \n"))
-        if(choice==1):
-            code()
-        if(choice==2):
-            decode()
-        if(choice==3):
-            quit()
-        confirm=input("So do you want to again Decode or code?\n Yes or No\n")
-        if confirm.lower()=="yes":
-            continue#i want the loop to again occur
+
+def questionsFunction():
+    global WinningAmount
+    for i in range(len(questions)):
+        print("\n\nSo Our Question No.",i+1," is \n",questions[i])
+        answers=input("\n\nPlease Type The Corrected Answer as per the Options Given:")
+        if answers==Correctanswers[i]:
+            WinningAmount+=money[i]
+            print("\n\nCongratulations You Won Ruppes",money[i],"\n Now Lets Move towards The Next Question:")
         else:
-            quit()
-main()
+            break
+    
+    if WinningAmount>=10000000:
+        print("\n\nLadies and gentlemen, hold your breath, for we have a winner amongst us tonight! Our contestant has just clinched the monumental sum of 1 crore rupees! What an exhilarating moment! Heartiest congratulations to you, my friend! You've not only won the game but also the hearts of millions watching across the nation! Keep shining and soaring high!")
+        print("\n\nYou Played Very well Here Your Winning Amount : ",WinningAmount)
+    else:
+        print("\n\nYou Played Very well Here Your Winning Amount : ",WinningAmount)
 
-   
+
+start()
