@@ -2,6 +2,9 @@ from tkinter import *
 import time
 import mysql.connector
 from mysql.connector import errorcode
+from datetime import datetime,timedelta
+from tkcalendar import Calendar
+from tkinter import messagebox
 
   
 class App(Tk):
@@ -9,6 +12,53 @@ class App(Tk):
         super().__init__()
         self.geometry('780x500')
         self.title("Personal Expense Tracker")
+        self.init_db()
+        
+    def on_closing(self):
+        if messagebox.askokcancel("Quit","Do you want to quit?"):
+            try:
+                if self.cursor:self.cursor.close()
+                if self.connection:self.connection.close()
+                print("Database connection closed")
+            except:
+                pass
+            self.destroy()
+            
+    def ensure_connection(self):
+        try:
+            if self.connection is None or not self.connection.is_connected():
+                self.init_db()
+        except:
+            self.init_db()
+    def init_db(self):
+        try:
+            self.connection=mysql.connector.connect(
+                host="localhost",
+                user="root",
+                password="manavnaik@123"
+            )
+            self.cursor=self.connection.cursor()
+            self.cursor.execute("CREATE DATABASE IF NOT EXISTS expense_tracker")
+            print("Database Created Successfully")
+            self.connection.database="expense_tracker"
+            
+            self.cursor.execute("""
+                           CREATE TABLE IF NOT EXISTS expenses(
+                               id INT AUTO_INCREMENT PRIMARY KEY,
+                               amount DECIMAL(10,2) NOT NULL,
+                               category VARCHAR(100),
+                               datetime DATETIME,
+                               description TEXT
+                           )
+                           """)
+            print("Table created/checked.")
+            
+            
+            
+        except mysql.connector.Error as err:
+            print("MySQL Error : ",err)
+        
+              
     def setMainFrame(self):
         mainFrame=Frame(self)
         mainFrame.pack()
@@ -18,7 +68,7 @@ class App(Tk):
         # top_frame = Frame(mainFrame)
         # top_frame.pack(side="top", anchor="n", pady=20)
         
-        b1=Button(mainFrame,text="Add Expense",font=(20),command=sql_add_expense)
+        b1=Button(mainFrame,text="Add Expense",font=(20),command=self.sql_add_expense)
         b1.pack(side="left", expand=True,pady=10,padx=20,)
         b2=Button(mainFrame,text="View Expense",font=(20))
         b2.pack(side="left", expand=True,pady=10,padx=20)            
@@ -34,41 +84,165 @@ class App(Tk):
         curr_minute=time.strftime("%M")
         curr_second=time.strftime("%S")
         
-        return (curr_year,curr_month,curr_date,curr_hour,curr_minute,curr_second)        
+        return f"{curr_year}-{curr_month}-{curr_date} {curr_hour}-{curr_minute}-{curr_second}"        
     
-    def AddExpense(self):    
-        f1=LabelFrame(self,text="Add Expense",font=(5))
-        f1.pack(ipadx=10,ipady=10)
+    def AddExpense(self):
+        self.datetime=StringVar()    
+        self.datetime.set(self.date_and_time())
+        f1=LabelFrame(self,text="Add Expense",font=(30))
+        f1.pack(ipadx=10,ipady=20)
         
-        l1=Label(f1,text="Amount      ",font=("Arial",10))
-        l1.grid(row=1,column=1,sticky="w")
-        e1=Entry(f1,width=80)
-        e1.grid(row=1,column=2,sticky="w")
+        self.l1=Label(f1,text="Amount      ",font=("Arial",15))
+        self.l1.grid(row=1,column=1,sticky="w")
+        self.e1=Entry(f1,width=80)
+        self.e1.grid(row=1,column=2,sticky="w")
         
-        l2=Label(f1,text="Category    ",font=("Arial",10))
-        l2.grid(row=2,column=1,sticky="w")
-        e2=Entry(f1,width=80)
-        e2.grid(row=2,column=2,sticky="w")
+        self.l2=Label(f1,text="Category    ",font=("Arial",15))
+        self.l2.grid(row=2,column=1,sticky="w")
+        self.e2=Entry(f1,width=80)
+        self.e2.grid(row=2,column=2,sticky="w")
         
-        l3=Label(f1,text="Date         ",font=("Arial",10))
-        l3.grid(row=3,column=1,sticky="w")
-        e3=Entry(f1,width=80)
-        e3.grid(row=3,column=2,sticky="w")
-        b1=Button(f1,text="hello").grid(row=3,column=3,padx=10)
+        self.l3=Label(f1,text="Date         ",font=("Arial",15))
+        self.l3.grid(row=3,column=1,sticky="w")
+        self.e3=Entry(f1,width=80,textvariable=self.datetime,state="readonly")
+        self.e3.grid(row=3,column=2,sticky="w")
+        self.b1=Button(f1,text="Custom",command=self.select_custom_date_time)
+        self.b1.grid(row=3,column=3,padx=10)
         
-        l4=Label(f1,text="Description  ",font=("Arial",10))
-        l4.grid(row=4,column=1,columnspan=2,sticky="w")
-        tf1=Text(f1,height=4,width=60)
-        tf1.grid(row=4,column=2,sticky="w")
+        self.l4=Label(f1,text="Description  ",font=("Arial",15))
+        self.l4.grid(row=4,column=1,columnspan=2,sticky="w")
+        self.tf1=Text(f1,height=6,width=60)
+        self.tf1.grid(row=4,column=2,sticky="w")
+        
+        self.submit_button=Button(f1,text="Submit",anchor="e",font=("Arial",15),command=lambda : self.submit_to_sql())
+        self.submit_button.grid(row=5,column=2,pady=20)
+        
+        self.reset_button=Button(f1,text="Reset",anchor="e",font=("Arial",15))
+        self.reset_button.grid(row=5,column=3,pady=20)
     
+    def submit_to_sql(self):
+        self.ensure_connection()
+        if messagebox.askyesno("Submit","Do you confirm your submission ?"):
+            submit_query = """
+                INSERT INTO expenses(amount,category,datetime,description)
+            VALUES (%s,%s,%s,%s)
+                        """
+            values = (
+                self.e1.get(),
+                self.e2.get(),
+                self.e3.get(),
+                self.tf1.get("1.0", "end-1c")
+            )
+
+            try:
+                self.cursor.execute(submit_query,values)
+                messagebox.showinfo("Saved", "Your expense has been saved to the database!")
+                self.connection.commit()
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error","Something went wrong while saving your expense! Please try again later.")
+                print(err)
+            
+        
+    def select_custom_date_time(self):
+        
+        toplevel1=Toplevel(self)
+        
+        f1=Frame(toplevel1)
+        f1.pack(padx=10,pady=10)
+        
+        calenderLabel=Label(f1,text="Date",anchor="center",font=("Arial",20))
+        calenderLabel.grid(row=0,column=1)
+        hourLabel=Label(f1,text="H",anchor="w",font=("Arial",20))
+        hourLabel.grid(row=0,column=2)
+        minuteLabel=Label(f1,text="M",anchor="w",font=("Arial",20))
+        minuteLabel.grid(row=0,column=3)
+        secondLabel=Label(f1,text="S",anchor="w",font=("Arial",20))
+        secondLabel.grid(row=0,column=4)
+        self.calender1=Calendar(f1,selectmode='day')
+        self.calender1.grid(row=1,column=1)
+        
+        hour_list_frame=Frame(f1)
+        hour_list_frame.grid(row=1,column=2)
+        hour_scrollbar=Scrollbar(hour_list_frame)
+        hour_scrollbar.pack(side="right",fill="y")
+        
+        self.hour_listbox=Listbox(
+            hour_list_frame,height=8,width=3,font=("Arial",14),
+            exportselection=False,yscrollcommand=hour_scrollbar.set
+        )
+        
+        for hour in range(24):
+            self.hour_listbox.insert(END,f"{hour:02d}")
+        
+        self.hour_listbox.pack(side="left",fill="y")
+        hour_scrollbar.config(command=self.hour_listbox.yview)
+        
+        minute_list_frame=Frame(f1)
+        minute_list_frame.grid(row=1,column=3)
+        minute_scrollbar=Scrollbar(minute_list_frame)
+        minute_scrollbar.pack(side="right",fill="y")
+        
+        self.minute_listbox=Listbox(
+            minute_list_frame,height=8,width=3,font=("Arial",14),
+            exportselection=False,yscrollcommand=minute_scrollbar.set
+        )
+        
+        for minute in range(60):
+            self.minute_listbox.insert(END,f"{minute:02d}")
+        
+        self.minute_listbox.pack(side="left",fill="y")
+        minute_scrollbar.config(command=self.minute_listbox.yview)
+        
+        second_list_frame=Frame(f1)
+        second_list_frame.grid(row=1,column=4)
+        second_scrollbar=Scrollbar(second_list_frame)
+        second_scrollbar.pack(side="right",fill="y")
+        
+        self.second_listbox=Listbox(
+            second_list_frame,height=8,width=3,font=("Arial",14),
+            exportselection=False,yscrollcommand=second_scrollbar.set
+        )
+        
+        for second in range(60):
+            self.second_listbox.insert(END,f"{second:02d}")
+        
+        self.second_listbox.pack(side="left",fill="y")
+        second_scrollbar.config(command=self.second_listbox.yview)
+        
+        l1=Label(f1,text="Select Date and Time from above : ",anchor="center")
+        l1.grid(row=2,column=1,columnspan=4)
+        
+        okbutton=Button(f1,text="OK",anchor="center",command=lambda : self.return_selection(toplevel1))
+        okbutton.grid(row=4,column=1,columnspan=4)
+        
+    def return_selection(self,toplevel1):
+        if not self.hour_listbox.curselection() or not self.minute_listbox.curselection() or not self.second_listbox.curselection():
+            messagebox.showwarning("No Selection","Please select appropriate time.")
+            return
+        selected_date=self.calender1.get_date() 
+        hour=self.hour_listbox.get(self.hour_listbox.curselection()[0])
+        print(hour)
+        minute=self.minute_listbox.get(self.minute_listbox.curselection()[0])
+        print(minute)
+        second=self.second_listbox.get(self.second_listbox.curselection()[0])
+        print(second)
+        dt_obj = datetime.strptime(selected_date, "%m/%d/%y")
+        formatted_date = dt_obj.strftime("%Y-%m-%d")
+        
+        final_datetime = f"{formatted_date} {hour}:{minute}:{second}"
+        if messagebox.askyesno("Confirmation",f"The Date is {formatted_date} and Time is {hour}:{minute}:{second}"):
+            self.datetime.set(final_datetime)
+            toplevel1.destroy()
+        
+
     def sql_add_expense(self):
-        self.connect_to_db()
-
-
+        self.init_db()  
 
 if __name__=="__main__":
     app=App()
     app.setMainFrame()
+    app.protocol("WM_DELETE_WINDOW",app.on_closing)
     app.mainloop()
+
 
 
