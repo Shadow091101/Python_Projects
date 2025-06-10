@@ -5,8 +5,6 @@ from mysql.connector import errorcode
 from datetime import datetime,timedelta
 from tkcalendar import Calendar
 from tkinter import messagebox
-
-  
 class App(Tk):
     def __init__(self):
         super().__init__()
@@ -52,9 +50,6 @@ class App(Tk):
                            )
                            """)
             print("Table created/checked.")
-            
-            
-            
         except mysql.connector.Error as err:
             print("MySQL Error : ",err)
         
@@ -73,7 +68,9 @@ class App(Tk):
         b2=Button(mainFrame,text="View Expense",font=(20),command=self.View_Expense)
         b2.pack(side="left", expand=True,pady=10,padx=20)            
         b3=Button(mainFrame,text="Export CSV",font=(20))
-        b3.pack(side="left", expand=True,pady=10,padx=20)    
+        b3.pack(side="left", expand=True,pady=10,padx=20)
+        self.f1=LabelFrame(self,text="",font=(30))
+        self.f1.pack(ipadx=10,ipady=20)    
         self.AddExpense()        
         
     def date_and_time(self):
@@ -89,9 +86,9 @@ class App(Tk):
     def AddExpense(self):
         self.datetime=StringVar()    
         self.datetime.set(self.date_and_time())
-        self.f1=LabelFrame(self,text="Add Expense",font=(30))
-        self.f1.pack(ipadx=10,ipady=20)
-        
+        for widget in self.f1.winfo_children():
+            widget.destroy()
+        self.f1.config(text="Add Expense")
         self.l1=Label(self.f1,text="Amount      ",font=("Arial",15))
         self.l1.grid(row=1,column=1,sticky="w")
         self.e1=Entry(self.f1,width=80)
@@ -247,22 +244,69 @@ class App(Tk):
         
 
     def sql_add_expense(self):
-        for widget in self.f1.winfo_children():
-            widget.destroy()
-        
-        self.f1.config(text="Add Expense")
-        self.AddExpense()
+        self.AddExpense() 
         self.init_db()  
         
     def View_Expense(self):
         for widget in self.f1.winfo_children():
             widget.destroy()
         self.f1.config(text="View Expense")
-        t1=Label(self.f1,"Hello")
-        t1.pack()
+        self.f1.config()
         
+        self.canvas=Canvas(self.f1,width=800)
+        self.scrollbar=Scrollbar(self.f1,command=self.canvas.yview,orient="vertical")
+        self.horizontal_scrollbar=Scrollbar(self.f1,command=self.canvas.xview,orient='horizontal')
+        self.scroll_frame=Frame(self.canvas)
+        
+        self.scroll_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+        self.canvas.create_window((0,0),window=self.scroll_frame,anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set,xscrollcommand=self.horizontal_scrollbar.set)
+        
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.scrollbar.grid(row=0, column=1, sticky="ns")
+        self.horizontal_scrollbar.grid(row=1, column=0, sticky="ew")
+
+        self.f1.grid_rowconfigure(0, weight=1)
+        self.f1.grid_columnconfigure(0, weight=1)
+        try:
+            select_query="SELECT amount,category,description,datetime FROM expenses ORDER BY datetime DESC ;"
+            self.cursor.execute(select_query)
+            result=self.cursor.fetchall()
+            if not result:
+                Label(self.scroll_frame,text="No records found").grid(row=0,column=0,padx=10,pady=10)
+                return
             
+            column_width={
+                'id':5,
+                'amount':10,
+                'category':15,
+                'description':55,
+                'datetime':15
+            }
+            column_names=[desc[0] for desc in self.cursor.description]
+            for col,name in enumerate(column_names):
+                self.width=column_width.get(name,15)
+                self.col_label=Label(self.scroll_frame,text=name,font=("Arial",10,"bold"), borderwidth=1, relief="solid", width=self.width)
+                self.col_label.grid(row=0,column=col,sticky="nsew")
         
+           
+            for row_num,row_data in enumerate(result,start=1):
+                for col_num,cell_data in enumerate(row_data):
+                    col_name = column_names[col_num]
+                    width = column_width.get(col_name, 15)
+                    sticky = "nsew" if col_name == 'description' else "nsew"
+                    row_labels=Label(self.scroll_frame,text=cell_data,borderwidth=1, relief="solid", width=width,anchor="w")
+                    row_labels.grid(row=row_num,column=col_num,sticky=sticky)
+            
+            
+        except mysql.connector.Error as err:
+            Label(self.scroll_frame, text=f"Database error: {err}").grid(row=0, column=0)
+            print(err)
         
 
 if __name__=="__main__":
