@@ -70,7 +70,7 @@ class App(Tk):
         
         b1=Button(mainFrame,text="Add Expense",font=(20),command=self.sql_add_expense)
         b1.pack(side="left", expand=True,pady=10,padx=20,)
-        b2=Button(mainFrame,text="View Expense",font=(20))
+        b2=Button(mainFrame,text="View Expense",font=(20),command=self.View_Expense)
         b2.pack(side="left", expand=True,pady=10,padx=20)            
         b3=Button(mainFrame,text="Export CSV",font=(20))
         b3.pack(side="left", expand=True,pady=10,padx=20)    
@@ -84,41 +84,48 @@ class App(Tk):
         curr_minute=time.strftime("%M")
         curr_second=time.strftime("%S")
         
-        return f"{curr_year}-{curr_month}-{curr_date} {curr_hour}-{curr_minute}-{curr_second}"        
+        return f"{curr_year}-{curr_month}-{curr_date} {curr_hour}:{curr_minute}:{curr_second}"        
     
     def AddExpense(self):
         self.datetime=StringVar()    
         self.datetime.set(self.date_and_time())
-        f1=LabelFrame(self,text="Add Expense",font=(30))
-        f1.pack(ipadx=10,ipady=20)
+        self.f1=LabelFrame(self,text="Add Expense",font=(30))
+        self.f1.pack(ipadx=10,ipady=20)
         
-        self.l1=Label(f1,text="Amount      ",font=("Arial",15))
+        self.l1=Label(self.f1,text="Amount      ",font=("Arial",15))
         self.l1.grid(row=1,column=1,sticky="w")
-        self.e1=Entry(f1,width=80)
+        self.e1=Entry(self.f1,width=80)
         self.e1.grid(row=1,column=2,sticky="w")
         
-        self.l2=Label(f1,text="Category    ",font=("Arial",15))
+        self.l2=Label(self.f1,text="Category    ",font=("Arial",15))
         self.l2.grid(row=2,column=1,sticky="w")
-        self.e2=Entry(f1,width=80)
+        self.e2=Entry(self.f1,width=80)
         self.e2.grid(row=2,column=2,sticky="w")
         
-        self.l3=Label(f1,text="Date         ",font=("Arial",15))
+        self.l3=Label(self.f1,text="Date         ",font=("Arial",15))
         self.l3.grid(row=3,column=1,sticky="w")
-        self.e3=Entry(f1,width=80,textvariable=self.datetime,state="readonly")
+        self.e3=Entry(self.f1,width=80,textvariable=self.datetime,state="readonly")
         self.e3.grid(row=3,column=2,sticky="w")
-        self.b1=Button(f1,text="Custom",command=self.select_custom_date_time)
+        self.b1=Button(self.f1,text="Custom",command=self.select_custom_date_time)
         self.b1.grid(row=3,column=3,padx=10)
         
-        self.l4=Label(f1,text="Description  ",font=("Arial",15))
+        self.l4=Label(self.f1,text="Description  ",font=("Arial",15))
         self.l4.grid(row=4,column=1,columnspan=2,sticky="w")
-        self.tf1=Text(f1,height=6,width=60)
+        self.tf1=Text(self.f1,height=6,width=60)
         self.tf1.grid(row=4,column=2,sticky="w")
         
-        self.submit_button=Button(f1,text="Submit",anchor="e",font=("Arial",15),command=lambda : self.submit_to_sql())
+        self.submit_button=Button(self.f1,text="Submit",anchor="e",font=("Arial",15),command=lambda : self.submit_to_sql())
         self.submit_button.grid(row=5,column=2,pady=20)
         
-        self.reset_button=Button(f1,text="Reset",anchor="e",font=("Arial",15))
+        self.reset_button=Button(self.f1,text="Reset",anchor="e",font=("Arial",15),command=self.reset_records)
         self.reset_button.grid(row=5,column=3,pady=20)
+    
+    def reset_records(self):
+        if messagebox.askyesno("Reset","Do you want to reset the entries? "):
+            self.e1.delete(0,END)
+            self.e2.delete(0,END)
+            self.datetime.set(self.date_and_time())
+            self.tf1.delete("1.0","end")
     
     def submit_to_sql(self):
         self.ensure_connection()
@@ -137,6 +144,10 @@ class App(Tk):
             try:
                 self.cursor.execute(submit_query,values)
                 messagebox.showinfo("Saved", "Your expense has been saved to the database!")
+                self.e1.delete(0,END)
+                self.e2.delete(0,END)
+                self.datetime.set(self.date_and_time())
+                self.tf1.delete("1.0","end")
                 self.connection.commit()
             except mysql.connector.Error as err:
                 messagebox.showerror("Error","Something went wrong while saving your expense! Please try again later.")
@@ -236,7 +247,23 @@ class App(Tk):
         
 
     def sql_add_expense(self):
+        for widget in self.f1.winfo_children():
+            widget.destroy()
+        
+        self.f1.config(text="Add Expense")
+        self.AddExpense()
         self.init_db()  
+        
+    def View_Expense(self):
+        for widget in self.f1.winfo_children():
+            widget.destroy()
+        self.f1.config(text="View Expense")
+        t1=Label(self.f1,"Hello")
+        t1.pack()
+        
+            
+        
+        
 
 if __name__=="__main__":
     app=App()
