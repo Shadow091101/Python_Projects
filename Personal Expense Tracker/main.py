@@ -252,6 +252,46 @@ class App(Tk):
         
     select_query_="SELECT amount,category,description,datetime FROM expenses ORDER BY datetime DESC ;"
     def View_Expense(self,query=None):
+        def filter_window():
+            filter_top_level=Toplevel(self.f1)
+            filter_window_frame=Frame(filter_top_level)
+            filter_window_frame.pack(padx=10,pady=10,ipadx=10,ipady=10)
+            filter_window_label_1=Label(filter_window_frame,text="Select What you want to sort : ")
+            filter_window_label_1.grid(row=0,column=0,columnspan=2)
+            
+            amount_filter_var=StringVar()
+            amount_filter_var.set("")
+            amount_filter_options=["BETWEEN 0 AND 10","BETWEEN 10 AND 50","BETWEEN 50 AND 100","BETWEEN 100 AND 500",">500"]
+            
+            category_filter_var=StringVar()
+            category_filter_var.set()
+            category_filter_options=self.categories
+            
+            def op(*args):
+                query=f"SELECT amount,category,description,datetime FROM expenses WHERE amount {amount_filter_var.get()} ORDER BY datetime DESC ;"
+                print("Select :",query)
+                self.View_Expense(query)
+                print("Success",amount_filter_var.get())
+                
+            def category(*args):
+                query=f"SELECT amount,category,description,datetime FROM expenses WHERE category = {category_filter_var.get()} ORDER BY datetime DESC ;"
+                print("Select :",query)
+                self.View_Expense(query)
+                print("Success",category_filter_var.get())
+            
+            amount_filter_var.trace_add("write",op)
+            amount_filter_label=Label(filter_window_frame,text="Amount")
+            amount_filter_label.grid(row=1,column=0)
+            amount_option_filter=OptionMenu(filter_window_frame,amount_filter_var,*amount_filter_options)
+            amount_option_filter.grid(row=1,column=1)
+            
+            category_filter_var.trace_add("write",category)
+            category_filter_label=Label(filter_window_frame,text="Category")
+            category_filter_label.grid(row=2,column=0)
+            category_option_filter=OptionMenu(filter_window_frame,category_filter_var,*category_filter_options)
+            category_option_filter.grid(row=2,column=1)
+            
+            
         if query==None:
             query=self.select_query_
         for widget in self.f1.winfo_children():
