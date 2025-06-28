@@ -254,6 +254,21 @@ class App(Tk):
     
     query_array=[]
     def View_Expense(self,query=None):
+        def update_rows(id):
+            
+            query=f"SELECT amount,category,datetime,description FROM expenses WHERE id={id}"
+            self.cursor.execute(query)
+            result=self.cursor.fetchone()
+            # print("Selected row : "+str(result))
+            column_names = ['amount', 'category', 'datetime', 'description']
+            if result:
+                for col_name, cell_data in zip(column_names, result):
+                    print(f"{col_name}: {cell_data}")
+                    
+                    
+
+            
+            pass
         def sort_window():
             sort_top_level = Toplevel(self.f1)
             sort_window_frame = Frame(sort_top_level)
@@ -436,21 +451,29 @@ class App(Tk):
                 return
             
             column_width={
-                'id':5,
+                'edit':7,
                 'amount':10,
                 'category':15,
                 'description':55,
                 'datetime':15
             }
+            self.cursor.execute("SELECT * FROM expenses")
+            result = self.cursor.fetchall()
             column_names=[desc[0] for desc in self.cursor.description]
+            column_names[0]="edit"
+            print(column_names)
             for col,name in enumerate(column_names):
                 self.width=column_width.get(name,15)
                 self.col_label=Label(self.scroll_frame,text=name,font=("Arial",10,"bold"), borderwidth=1, relief="solid", width=self.width)
                 self.col_label.grid(row=0,column=col,sticky="nsew")
         
+           
             for row_num,row_data in enumerate(result,start=1):
-                for col_num,cell_data in enumerate(row_data):
-                    col_name = column_names[col_num]
+                userid = str(row_data[0])
+                edit_button=Button(self.scroll_frame,text="Edit",command=lambda uid =userid:update_rows(uid))
+                edit_button.grid(row=row_num,column=0,padx=5)
+                for col_num,(col_name, cell_data) in enumerate(zip(column_names[1:], row_data[1:]), start=1):
+                    # col_name = column_names[col_num]
                     width = column_width.get(col_name, 15)
                     sticky = "nsew" if col_name == 'description' else "nsew"
                     row_labels=Label(self.scroll_frame,text=cell_data,borderwidth=1, relief="solid", width=width,anchor="w")
@@ -497,7 +520,7 @@ class App(Tk):
         sort_button=Button(self.f1,text="Sort",command=sort_window,)
         sort_button.grid(row=2,column=0,padx=10,pady=10,sticky="e")
         
-            
+    
         
         
         
