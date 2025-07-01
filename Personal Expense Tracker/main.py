@@ -154,10 +154,12 @@ class App(Tk):
                 print(err)
             
         
-    def select_custom_date_time(self):
+    def select_custom_date_time(self,target_datetime_var):
         
         toplevel1=Toplevel(self)
-        
+        toplevel1.grab_set()
+        self.custom_date_target_var=target_datetime_var
+        self.custom_date_window=toplevel1
         f1=Frame(toplevel1)
         f1.pack(padx=10,pady=10)
         
@@ -223,10 +225,10 @@ class App(Tk):
         l1=Label(f1,text="Select Date and Time from above : ",anchor="center")
         l1.grid(row=2,column=1,columnspan=4)
         
-        okbutton=Button(f1,text="OK",anchor="center",command=lambda : self.return_selection(toplevel1))
+        okbutton=Button(f1,text="OK",anchor="center",command=self.return_selection)
         okbutton.grid(row=4,column=1,columnspan=4)
         
-    def return_selection(self,toplevel1):
+    def return_selection(self):
         if not self.hour_listbox.curselection() or not self.minute_listbox.curselection() or not self.second_listbox.curselection():
             messagebox.showwarning("No Selection","Please select appropriate time.")
             return
@@ -242,8 +244,8 @@ class App(Tk):
         
         final_datetime = f"{formatted_date} {hour}:{minute}:{second}"
         if messagebox.askyesno("Confirmation",f"The Date is {formatted_date} and Time is {hour}:{minute}:{second}"):
-            self.datetime.set(final_datetime)
-            toplevel1.destroy()
+            self.custom_date_target_var.set(final_datetime)
+            self.custom_date_window.destroy()
         
 
     def sql_add_expense(self):
@@ -254,6 +256,120 @@ class App(Tk):
     
     query_array=[]
     def View_Expense(self,query=None):
+        def edit_rows(id):
+            
+            query=f"SELECT amount,category,datetime,description FROM expenses WHERE id={id}"
+            self.cursor.execute(query)
+            result=self.cursor.fetchone()
+            # print("Selected row : "+str(result))
+            column_names = ['amount', 'category', 'datetime', 'description']
+            if result:
+                for col_name, cell_data in zip(column_names, result):
+                    print(f"{col_name}: {cell_data}")
+            edit_top_level=Toplevel(self.f1)
+            edit_top_level.grab_set() 
+            # edit_top_level.attributes("-topmost", True)
+            edit_window_frame=Frame(edit_top_level)
+            edit_window_frame.pack(padx=10,pady=10,ipadx=10,ipady=10)
+            l1=Label(edit_window_frame,text="Select what you want to do with this record: ")
+            l1.grid(row=0,column=0,columnspan=2,padx=10,pady=10,sticky=NSEW)
+            delete_button=Button(edit_window_frame,text="Delete",command=lambda:delete_record(id))
+            delete_button.grid(row=1,column=0,padx=5,pady=5)
+            update_button=Button(edit_window_frame,text="Update",command=lambda:update_record(id))
+            update_button.grid(row=1,column=1,padx=5,pady=5)
+            
+            def update_record(id):
+                
+                def reset_update():
+                    if messagebox.askyesno("Reset","Do you want to reset the entries? "):
+                        update_amount.set(row_data[0])
+                        update_category_var.set(row_data[1])
+                        update_datetime.set(row_data[2])
+                        tf2.delete("1.0",END)
+                        tf2.insert("1.0",row_data[3])
+                        
+                def submit_update():
+                    self.ensure_connection()
+                    if messagebox.askyesno("Submit","Do you confirm your updation ?"):
+                        update_query ="""
+                            UPDATE expenses
+                            SET amount=%s,
+                                category=%s,
+                                datetime=%s,
+                                description=%s
+                            WHERE id=%s
+                        """
+                        values=(
+                            update_amount.get(),
+                            update_category_var.get(),
+                            update_datetime.get(),
+                            tf2.get("1.0","end-1c"),
+                            id
+                        )
+                        try:
+                            self.cursor.execute(update_query,values)
+                            messagebox.showinfo("Update Saved", "Your expense has been updated successfully to the database!")
+                            self.connection.commit()
+                            edit_top_level.destroy()
+                            self.View_Expense(self.select_query_)
+                        except mysql.connector.Error as err:
+                            messagebox.showerror("Error","Something went wrong while updating your expense! Please try again later.")
+                            print(err)
+                    
+                row_data=[]
+                try:
+                    self.cursor.execute(f"SELECT amount,category,datetime,description FROM expenses WHERE id={id}")
+                    result=self.cursor.fetchone()
+                    if result:
+                        for col_name, cell_data in zip(column_names, result):
+                            print(f"{cell_data}")    
+                            row_data.append(cell_data)
+                except mysql.connector.Error as err:
+                    print(err)
+                
+                update_datetime=StringVar() 
+                update_datetime.set(row_data[2])
+                update_amount=StringVar()
+                update_amount.set(row_data[0])
+                update_category_var=StringVar()
+                update_category_var.set(row_data[1])
+                for widgets in edit_window_frame.winfo_children():
+                    widgets.destroy()
+                l1=Label(edit_window_frame,text="Update Record")
+                l1.grid(row=0,column=0,columnspan=3,padx=10,pady=10)
+                for i in range(1,5):
+                    l=Label(edit_window_frame,text=f"{column_names[i-1]}")
+                    l.grid(row=i,column=0,pady=10,padx=10)
+                e1=Entry(edit_window_frame,textvariable=update_amount)
+                e1.grid(row=1,column=1,sticky="w")
+                e2 = OptionMenu(edit_window_frame, update_category_var, *self.categories)
+                e2.grid(row=2,column=1,sticky="w")
+                e3=Entry(edit_window_frame,textvariable=update_datetime,state="readonly")
+                e3.grid(row=3,column=1,sticky="w")
+                b1=Button(edit_window_frame,text="Custom",command=lambda:self.select_custom_date_time(update_datetime))
+                b1.grid(row=3,column=2,padx=10,sticky="w")
+                tf2=Text(edit_window_frame,height=6,width=60)
+                tf2.grid(row=4,column=1,sticky="w")  
+                tf2.insert("1.0",row_data[3])
+                submit_btn=Button(edit_window_frame,text="Submit",command=submit_update)
+                submit_btn.grid(row=5,column=1,sticky="e",pady=10)
+                reset_btn=Button(edit_window_frame,text="Reset",command=reset_update)
+                reset_btn.grid(row=5,column=2,sticky="e",pady=10)
+                
+                
+            
+            def delete_record(id):
+                query=f"DELETE FROM expenses WHERE id={id}"
+                try:
+                    self.cursor.execute(query)
+                    self.connection.commit()
+                    messagebox.showinfo("Success","Record deleted")
+                    edit_top_level.destroy()
+                    self.View_Expense(self.select_query_)
+                except mysql.connector.Error as err:
+                    messagebox.showerror("ERROR","Error occured while deleting the record. Please try again later.")
+            pass
+        
         def sort_window():
             sort_top_level = Toplevel(self.f1)
             sort_window_frame = Frame(sort_top_level)
@@ -436,21 +552,29 @@ class App(Tk):
                 return
             
             column_width={
-                'id':5,
+                'edit':7,
                 'amount':10,
                 'category':15,
                 'description':55,
                 'datetime':15
             }
+            self.cursor.execute("SELECT * FROM expenses")
+            result = self.cursor.fetchall()
             column_names=[desc[0] for desc in self.cursor.description]
+            column_names[0]="edit"
+            print(column_names)
             for col,name in enumerate(column_names):
                 self.width=column_width.get(name,15)
                 self.col_label=Label(self.scroll_frame,text=name,font=("Arial",10,"bold"), borderwidth=1, relief="solid", width=self.width)
                 self.col_label.grid(row=0,column=col,sticky="nsew")
         
+           
             for row_num,row_data in enumerate(result,start=1):
-                for col_num,cell_data in enumerate(row_data):
-                    col_name = column_names[col_num]
+                userid = str(row_data[0])
+                edit_button=Button(self.scroll_frame,text="Edit",command=lambda uid =userid:edit_rows(uid))
+                edit_button.grid(row=row_num,column=0,padx=5)
+                for col_num,(col_name, cell_data) in enumerate(zip(column_names[1:], row_data[1:]), start=1):
+                    # col_name = column_names[col_num]
                     width = column_width.get(col_name, 15)
                     sticky = "nsew" if col_name == 'description' else "nsew"
                     row_labels=Label(self.scroll_frame,text=cell_data,borderwidth=1, relief="solid", width=width,anchor="w")
@@ -497,7 +621,7 @@ class App(Tk):
         sort_button=Button(self.f1,text="Sort",command=sort_window,)
         sort_button.grid(row=2,column=0,padx=10,pady=10,sticky="e")
         
-            
+    
         
         
         
