@@ -5,6 +5,9 @@ from mysql.connector import errorcode
 from datetime import datetime,timedelta
 from tkcalendar import Calendar
 from tkinter import messagebox
+import csv
+from tkinter import filedialog
+from db_config import db_config
 class App(Tk):
     def __init__(self):
         super().__init__()
@@ -31,9 +34,9 @@ class App(Tk):
     def init_db(self):
         try:
             self.connection=mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password="manavnaik@123"
+                host=db_config["host"],
+                user=db_config["user"],
+                password=db_config["password"]
             )
             self.cursor=self.connection.cursor()
             self.cursor.execute("CREATE DATABASE IF NOT EXISTS expense_tracker")
@@ -67,8 +70,8 @@ class App(Tk):
         b1.pack(side="left", expand=True,pady=10,padx=20,)
         b2=Button(mainFrame,text="View Expense",font=(20),command=self.View_Expense)
         b2.pack(side="left", expand=True,pady=10,padx=20)            
-        b3=Button(mainFrame,text="Export CSV",font=(20))
-        b3.pack(side="left", expand=True,pady=10,padx=20)
+        self.b3=Button(mainFrame,text="Export CSV",font=(20),command=self.export_to_csv,state=DISABLED)
+        self.b3.pack(side="left", expand=True,pady=10,padx=20)
         self.f1=LabelFrame(self,text="",font=(30))
         self.f1.pack(ipadx=20,ipady=20,padx=30,pady=30)    
         self.AddExpense()        
@@ -84,6 +87,7 @@ class App(Tk):
         return f"{curr_year}-{curr_month}-{curr_date} {curr_hour}:{curr_minute}:{curr_second}"        
     
     def AddExpense(self):
+        self.b3.config(state=DISABLED)
         self.categories=["Food","Beverages","Emergency","Study","Medical Expenses","Entertainment","Travel","Clothing","Utilities/Bills","Lend","Gifts","Family","Friends","Others"]
         self.opt=StringVar()
         self.opt.set(value="Others")
@@ -106,7 +110,7 @@ class App(Tk):
         self.l3.grid(row=3,column=1,sticky="w")
         self.e3=Entry(self.f1,width=80,textvariable=self.datetime,state="readonly")
         self.e3.grid(row=3,column=2,sticky="w")
-        self.b1=Button(self.f1,text="Custom",command=self.select_custom_date_time)
+        self.b1=Button(self.f1,text="Custom",command=lambda:self.select_custom_date_time(self.datetime))
         self.b1.grid(row=3,column=3,padx=10)
         
         self.l4=Label(self.f1,text="Description  ",font=("Arial",15))
@@ -255,9 +259,37 @@ class App(Tk):
     select_query_="SELECT amount,category,description,datetime FROM expenses ORDER BY datetime DESC ;"
     
     query_array=[]
-    def View_Expense(self,query=None):
-        def edit_rows(id):
+    def export_to_csv(self):
+        self.ensure_connection()
+        export_query=self.query_array[0] if self.query_array else self.select_query_
+        try:
+            self.cursor.execute(export_query)
+            result = self.cursor.fetchall()
+            columns = [desc[0] for desc in self.cursor.description]
             
+            if not result:
+                messagebox.showwarning("No Data", "No data to export.")
+                return
+            
+            # Ask for save location
+            file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+            if not file_path:
+                return  # User cancelled
+
+            with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerow(columns)  # Write headers
+                writer.writerows(result)  # Write data
+            
+            messagebox.showinfo("Export Successful", f"Data exported successfully to:\n{file_path}")
+            
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error", f"Error while exporting to CSV:\n{err}")
+
+        
+    def View_Expense(self,query=None):
+        self.b3.config(state=ACTIVE)
+        def edit_rows(id):
             query=f"SELECT amount,category,datetime,description FROM expenses WHERE id={id}"
             self.cursor.execute(query)
             result=self.cursor.fetchone()
@@ -354,10 +386,7 @@ class App(Tk):
                 submit_btn=Button(edit_window_frame,text="Submit",command=submit_update)
                 submit_btn.grid(row=5,column=1,sticky="e",pady=10)
                 reset_btn=Button(edit_window_frame,text="Reset",command=reset_update)
-                reset_btn.grid(row=5,column=2,sticky="e",pady=10)
-                
-                
-            
+                reset_btn.grid(row=5,column=2,sticky="e",pady=10)  
             def delete_record(id):
                 query=f"DELETE FROM expenses WHERE id={id}"
                 try:
