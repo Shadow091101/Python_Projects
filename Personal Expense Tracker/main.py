@@ -7,6 +7,7 @@ from tkcalendar import Calendar
 from tkinter import messagebox
 import csv
 from tkinter import filedialog
+from db_config import db_config
 class App(Tk):
     def __init__(self):
         super().__init__()
@@ -33,9 +34,9 @@ class App(Tk):
     def init_db(self):
         try:
             self.connection=mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password="manavnaik@123"
+                host=db_config["host"],
+                user=db_config["user"],
+                password=db_config["password"]
             )
             self.cursor=self.connection.cursor()
             self.cursor.execute("CREATE DATABASE IF NOT EXISTS expense_tracker")
