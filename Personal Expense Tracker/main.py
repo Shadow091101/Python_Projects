@@ -13,6 +13,7 @@ class App(Tk):
         super().__init__()
         self.geometry('780x500')
         self.title("Personal Expense Tracker")
+        self.resizable(0,0)
         self.init_db()
         
     def on_closing(self):
@@ -62,10 +63,6 @@ class App(Tk):
         mainFrame.pack()
         l1=Label(mainFrame,text="Personal Expense Tracker",font=("Arial",30),pady=10)
         l1.pack()
-        
-        # top_frame = Frame(mainFrame)
-        # top_frame.pack(side="top", anchor="n", pady=20)
-        
         b1=Button(mainFrame,text="Add Expense",font=(20),command=self.sql_add_expense)
         b1.pack(side="left", expand=True,pady=10,padx=20,)
         b2=Button(mainFrame,text="View Expense",font=(20),command=self.View_Expense)
@@ -161,6 +158,7 @@ class App(Tk):
     def select_custom_date_time(self,target_datetime_var):
         
         toplevel1=Toplevel(self)
+        toplevel1.resizable(0,0)
         toplevel1.grab_set()
         self.custom_date_target_var=target_datetime_var
         self.custom_date_window=toplevel1
@@ -293,14 +291,13 @@ class App(Tk):
             query=f"SELECT amount,category,datetime,description FROM expenses WHERE id={id}"
             self.cursor.execute(query)
             result=self.cursor.fetchone()
-            # print("Selected row : "+str(result))
             column_names = ['amount', 'category', 'datetime', 'description']
             if result:
                 for col_name, cell_data in zip(column_names, result):
                     print(f"{col_name}: {cell_data}")
             edit_top_level=Toplevel(self.f1)
+            edit_top_level.resizable(0,0)
             edit_top_level.grab_set() 
-            # edit_top_level.attributes("-topmost", True)
             edit_window_frame=Frame(edit_top_level)
             edit_window_frame.pack(padx=10,pady=10,ipadx=10,ipady=10)
             l1=Label(edit_window_frame,text="Select what you want to do with this record: ")
@@ -401,6 +398,7 @@ class App(Tk):
         
         def sort_window():
             sort_top_level = Toplevel(self.f1)
+            sort_top_level.resizable(0,0)
             sort_window_frame = Frame(sort_top_level)
             sort_window_frame.pack(padx=10, pady=10, ipadx=10, ipady=10)
 
@@ -483,13 +481,9 @@ class App(Tk):
             Button(sort_window_frame, text="Close", width=25, command=sort_top_level.destroy)\
         .grid(row=4, column=0, columnspan=2, pady=(15, 5))
             
-            # asc_button=Button(sort_window_frame,text="Ascending",command=asc_sort)
-            # asc_button.grid(row=1,column=0,padx=10,pady=10)
-            # desc_button=Button(sort_window_frame,text="Descending",command=desc_sort)
-            # desc_button.grid(row=2,column=0,padx=10,pady=10)
-            
         def filter_window():
             filter_top_level=Toplevel(self.f1)
+            filter_top_level.resizable(0,0)
             filter_window_frame=Frame(filter_top_level)
             filter_window_frame.pack(padx=10,pady=10,ipadx=10,ipady=10)
             filter_window_label_1=Label(filter_window_frame,text="Select What you want to sort : ")
@@ -510,19 +504,13 @@ class App(Tk):
                 query=f"SELECT amount,category,description,datetime FROM expenses WHERE category ='{category_filter_var.get()}' ORDER BY datetime DESC ;"
                 self.query_array.clear()
                 self.query_array.append(query)
-                # print("Select :",query)
-                # self.View_Expense(query)
                 selected_query["query"]=query
-                # print("Success",category_filter_var.get())
             
             def op(*args):
                 query=f"SELECT amount,category,description,datetime FROM expenses WHERE amount {amount_filter_var.get()} ORDER BY datetime DESC ;"
                 self.query_array.clear()
                 self.query_array.append(query)
-                # print("Select :",query)
-                # self.View_Expense(query)
                 selected_query["query"] = query
-                # print("Success",amount_filter_var.get())
             
             def apply_filter():
                 if selected_query["query"]:
@@ -597,63 +585,24 @@ class App(Tk):
                 self.col_label=Label(self.scroll_frame,text=name,font=("Arial",10,"bold"), borderwidth=1, relief="solid", width=self.width)
                 self.col_label.grid(row=0,column=col,sticky="nsew")
         
-           
             for row_num,row_data in enumerate(result,start=1):
                 userid = str(row_data[0])
                 edit_button=Button(self.scroll_frame,text="Edit",command=lambda uid =userid:edit_rows(uid))
                 edit_button.grid(row=row_num,column=0,padx=5)
                 for col_num,(col_name, cell_data) in enumerate(zip(column_names[1:], row_data[1:]), start=1):
-                    # col_name = column_names[col_num]
                     width = column_width.get(col_name, 15)
                     sticky = "nsew" if col_name == 'description' else "nsew"
                     row_labels=Label(self.scroll_frame,text=cell_data,borderwidth=1, relief="solid", width=width,anchor="w")
                     row_labels.grid(row=row_num,column=col_num,sticky=sticky)
             
-            
         except mysql.connector.Error as err:
             Label(self.scroll_frame, text=f"Database error: {err}").grid(row=0, column=0)
             print(err)
-        
-        # def filter_window():
-        #     filter_top_level=Toplevel(self.f1)
-        #     filter_window_frame=Frame(filter_top_level)
-        #     filter_window_frame.pack(padx=10,pady=10,ipadx=10,ipady=10)
-        #     filter_window_label_1=Label(filter_window_frame,text="Select What you want to sort : ")
-        #     filter_window_label_1.grid(row=0,column=0,columnspan=2)
-            
-        #     amount_filter_var=StringVar()
-        #     amount_filter_var.set("")
-        #     amount_filter_options=["BETWEEN 0 AND 10","BETWEEN 10 AND 50","BETWEEN 50 AND 100","BETWEEN 100 AND 500",">500"]
-            
-        #     def op(*args):
-        #         query=f"SELECT amount,category,description,datetime FROM expenses WHERE amount {amount_filter_var.get()} ORDER BY datetime DESC ;"
-        #         print("Select :",query)
-        #         self.View_Expense(query)
-        #         print("Success",amount_filter_var.get())
-            
-        #     amount_filter_var.trace_add("write",op)
-        #     amount_filter_label=Label(filter_window_frame,text="Amount")
-        #     amount_filter_label.grid(row=1,column=0)
-        #     amount_option_filter=OptionMenu(filter_window_frame,amount_filter_var,*amount_filter_options)
-        #     amount_option_filter.grid(row=1,column=1)
-            
-            # category_filter_button1=Button(filter_window_frame,text="Category",command=filter_categroy)
-            # category_filter_button1.grid(row=1,column=0)
-            
-            
-                
-            
-            pass
         
         button1=Button(self.f1,text="Filter",command=filter_window)
         button1.grid(row=2,column=1,sticky="ew",padx=10,pady=10)
         sort_button=Button(self.f1,text="Sort",command=sort_window,)
         sort_button.grid(row=2,column=0,padx=10,pady=10,sticky="e")
-        
-    
-        
-        
-        
 
 if __name__=="__main__":
     app=App()
